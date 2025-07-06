@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sniper Game</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      cursor: none;
+      font-family: sans-serif;
+      background: #222;
+      color: white;
+    }
+    #game {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+    #crosshair {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border: 2px solid red;
+      border-radius: 50%;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+    }
+    .target {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      background: white;
+      border-radius: 50%;
+    }
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 20px;
+      z-index: 20;
+    }
+    #gameOver {
+      margin-top: 10px;
+      color: red;
+      font-weight: bold;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <div id="crosshair"></div>
+    <div id="ui">
+      <div>Kills: <span id="kills">0</span></div>
+      <div>Record: <span id="record">0</span></div>
+      <div id="gameOver">Game Over! Reload to play again.</div>
+    </div>
+  </div>
+  <script>
+    const game = document.getElementById("game");
+    const crosshair = document.getElementById("crosshair");
+    const killsDisplay = document.getElementById("kills");
+    const recordDisplay = document.getElementById("record");
+    const gameOverText = document.getElementById("gameOver");
+
+    let canShoot = true;
+    let currentTarget = null;
+    let kills = 0;
+    let record = parseInt(localStorage.getItem("sniperRecord") || "0");
+    recordDisplay.textContent = record;
+
+    game.addEventListener("mousemove", (e) => {
+      crosshair.style.left = e.clientX + "px";
+      crosshair.style.top = e.clientY + "px";
+    });
+
+    game.addEventListener("click", () => {
+      if (!canShoot || !currentTarget) return;
+      canShoot = false;
+
+      const rect = currentTarget.getBoundingClientRect();
+      const crosshairRect = crosshair.getBoundingClientRect();
+      const dx = rect.left + rect.width / 2 - crosshairRect.left - crosshairRect.width / 2;
+      const dy = rect.top + rect.height / 2 - crosshairRect.top - crosshairRect.height / 2;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < 30) {
+        currentTarget.remove();
+        currentTarget = null;
+        kills++;
+        killsDisplay.textContent = kills;
+      }
+
+      setTimeout(() => { canShoot = true; }, 1000);
+    });
+
+    setInterval(() => {
+      if (currentTarget || gameOverText.style.display === "block") return;
+
+      const target = document.createElement("div");
+      target.classList.add("target");
+      target.style.left = Math.random() * window.innerWidth + "px";
+      target.style.top = "0px";
+      game.appendChild(target);
+      currentTarget = target;
+
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      let x = parseFloat(target.style.left);
+      let y = 0;
+      const speed = 1.5;
+
+      const moveInterval = setInterval(() => {
+        if (!currentTarget) {
+          clearInterval(moveInterval);
+          return;
+        }
+
+        const dx = centerX - x;
+        const dy = centerY - y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < 10) {
+          clearInterval(moveInterval);
+          endGame();
+          return;
+        }
+
+        x += (dx / dist) * speed;
+        y += (dy / dist) * speed;
+        target.style.left = x + "px";
+        target.style.top = y + "px";
+      }, 16);
+    }, 2000);
+
+    function endGame() {
+      if (kills > record) {
+        localStorage.setItem("sniperRecord", kills);
+        recordDisplay.textContent = kills;
+      }
+      if (currentTarget) {
+        currentTarget.remove();
+        currentTarget = null;
+      }
+      gameOverText.style.display = "block";
+    }
+  </script>
+</body>
+</html>
